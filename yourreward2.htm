@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>reward3</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #e2b07e; 
+            --secondary: #8b6d4d;
+            --bg: #020204;
+            --danger: #ff003c;
+            --glitch-color-1: #0ff;
+            --glitch-color-2: #f0f;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            background: var(--bg); color: var(--primary);
+            font-family: 'JetBrains Mono', monospace;
+            margin: 0; height: 100vh; overflow: hidden;
+            display: flex; justify-content: center; align-items: center;
+            transition: all 0.1s;
+        }
+
+        /* --- Scanlines & Vignette --- */
+        .overlay {
+            position: fixed; inset: 0; pointer-events: none; z-index: 999;
+            background: radial-gradient(circle at center, transparent 40%, rgba(0,0,0,0.8) 100%),
+                        repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(226, 176, 126, 0.05) 3px, rgba(226, 176, 126, 0.05) 3px);
+        }
+
+        /* --- Start Button --- */
+        #start-screen {
+            position: absolute; inset: 0; z-index: 1000; background: var(--bg);
+            display: flex; justify-content: center; align-items: center; transition: opacity 1s;
+        }
+        .btn-claim {
+            background: transparent; border: 1px solid var(--primary); color: var(--primary);
+            padding: 20px 40px; font-family: 'Cinzel', serif; font-size: 1.5rem; letter-spacing: 5px;
+            cursor: pointer; transition: all 0.4s; position: relative; overflow: hidden;
+        }
+        .btn-claim:hover { background: var(--primary); color: #000; box-shadow: 0 0 30px var(--primary); }
+
+        /* --- Complex Holy UI (Pre-Glitch) --- */
+        #core-ui {
+            display: none; flex-direction: column; align-items: center; width: 100%; height: 100%;
+            justify-content: center; position: relative;
+        }
+        
+        .hologram-circle {
+            width: 300px; height: 300px; border-radius: 50%;
+            border: 2px dashed rgba(226, 176, 126, 0.4);
+            position: relative; display: flex; justify-content: center; align-items: center;
+            animation: spin 20s linear infinite; box-shadow: 0 0 50px rgba(226, 176, 126, 0.1);
+        }
+        .hologram-circle::before, .hologram-circle::after {
+            content: ''; position: absolute; border-radius: 50%;
+        }
+        .hologram-circle::before {
+            width: 250px; height: 250px; border: 1px solid var(--primary);
+            animation: spin-reverse 15s linear infinite;
+        }
+        .hologram-circle::after {
+            width: 200px; height: 200px; border: 4px solid rgba(226, 176, 126, 0.2); border-top-color: var(--primary);
+            animation: spin 3s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
+        }
+
+        .core-text {
+            position: absolute; font-family: 'Cinzel', serif; font-size: 2rem; font-weight: bold;
+            text-shadow: 0 0 20px var(--primary); animation: pulse 2s infinite;
+        }
+
+        .data-stream {
+            position: absolute; top: 20px; left: 20px; font-size: 0.8rem; color: rgba(226, 176, 126, 0.6);
+        }
+        .data-stream-right { left: auto; right: 20px; text-align: right; }
+
+        .progress-container {
+            width: 400px; height: 4px; background: rgba(255,255,255,0.1); margin-top: 50px; position: relative;
+        }
+        .progress-bar { height: 100%; width: 0%; background: var(--primary); box-shadow: 0 0 15px var(--primary); transition: width 0.1s linear; }
+
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        @keyframes spin-reverse { 100% { transform: rotate(-360deg); } }
+        @keyframes pulse { 50% { opacity: 0.5; transform: scale(0.95); } }
+
+        /* --- HORROR GLITCH STATE --- */
+        body.glitch-mode {
+            background: #050000; animation: bg-flash 0.1s infinite;
+        }
+        
+        @keyframes bg-flash {
+            0%, 100% { background: #050000; } 50% { background: #2a0000; }
+        }
+
+        #glitch-container {
+            display: none; position: absolute; inset: 0; z-index: 500;
+            flex-direction: column; justify-content: center; align-items: center;
+        }
+
+        .glitch-text-huge {
+            font-family: 'Cinzel', serif; font-size: 4vw; color: var(--danger); font-weight: bold;
+            text-transform: uppercase; text-align: center; margin: 10px;
+            position: relative; text-shadow: 0 0 10px rgba(255,0,0,0.8);
+        }
+
+        /* Screen Tearing Effect */
+        .tear {
+            position: relative;
+        }
+        .tear::before, .tear::after {
+            content: attr(data-text); position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #050000;
+        }
+        .tear::before {
+            left: 3px; text-shadow: -2px 0 var(--glitch-color-1);
+            clip-path: polygon(0 0, 100% 0, 100% 30%, 0 30%);
+            animation: glitch-anim 0.2s infinite linear alternate-reverse;
+        }
+        .tear::after {
+            left: -3px; text-shadow: -2px 0 var(--glitch-color-2);
+            clip-path: polygon(0 70%, 100% 70%, 100% 100%, 0 100%);
+            animation: glitch-anim 0.3s infinite linear alternate-reverse;
+        }
+
+        @keyframes glitch-anim {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(10px); }
+        }
+
+        .flood-text {
+            position: absolute; font-size: 0.9rem; color: #ff3333; opacity: 0.7; font-weight: bold;
+            white-space: nowrap; pointer-events: none;
+        }
+
+        /* --- Calm Apology State --- */
+        #apology-screen {
+            position: fixed; inset: 0; background: #000; z-index: 2000;
+            display: flex; justify-content: center; align-items: center;
+            opacity: 0; pointer-events: none; transition: opacity 3s ease;
+        }
+        .apology-text {
+            font-family: 'JetBrains Mono', monospace; font-size: 1.1rem; color: #666;
+            text-align: center; line-height: 2;
+        }
+        .cursor-blink::after { content: '_'; animation: blink 1s infinite; }
+        @keyframes blink { 50% { opacity: 0; } }
+
+    </style>
+</head>
+<body>
+
+<div class="overlay"></div>
+
+<div id="start-screen">
+    <button class="btn-claim" onclick="startRewardSequence()">CLAIM YOUR REWARD</button>
+</div>
+
+<div id="core-ui">
+    <div class="data-stream" id="log-left"></div>
+    <div class="data-stream data-stream-right" id="log-right"></div>
+    
+    <div class="hologram-circle" id="core-circle">
+        <div class="core-text" id="core-status">LOCKED</div>
+    </div>
+    
+    <div class="progress-container">
+        <div class="progress-bar" id="prog-bar"></div>
+    </div>
+    <div style="margin-top: 15px; font-size: 0.9rem; letter-spacing: 2px;" id="prog-text">0.00%</div>
+</div>
+
+<div id="glitch-container">
+    <div class="glitch-text-huge tear" data-text="FATAL SYSTEM BREACH">FATAL SYSTEM BREACH</div>
+    <div class="glitch-text-huge tear" data-text="ERROR: THE REWARD HAS BEEN DELAYED" style="font-size: 3vw; color: #fff;">ERROR: THE REWARD HAS BEEN DELAYED</div>
+    <div class="glitch-text-huge" style="font-size: 2vw; margin-top: 30px; letter-spacing: 5px; color: #ff0000; animation: pulse 0.1s infinite;">NEW PUZZLE IS BEING PREPARED NOW ...</div>
+</div>
+
+<div id="apology-screen">
+    <div class="apology-text">
+        well looks like the devolper of this site is bad to make such an error like this :)<br>
+        sry amiga <span class="cursor-blink"></span>
+    </div>
+</div>
+
+<script>
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    // Fake tech jargon for side streams
+    const logs = ["Decrypting Sector 7", "idk what is going on T_T", "checking the puzzle", "Neural Sync: Active", "no cheating good !", "Accessing reward"];
+    const scaryLogs = ["HELL NAH", "SITE IS COOKED!", "WHERE IS THE GIFT", "WHO SAID IT WAS OVER?", "PURGING ENTITY", "LOOK BEHIND YOU", "I SEE YOU"];
+
+    function startRewardSequence() {
+        // Hide Start, Show Core
+        document.getElementById('start-screen').style.opacity = '0';
+        setTimeout(() => {
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('core-ui').style.display = 'flex';
+            audioCtx.resume(); // Ensure audio context is ready
+            runFakeLoading();
+        }, 1000);
+    }
+
+    function updateLogs() {
+        if(document.body.classList.contains('glitch-mode')) return;
+        document.getElementById('log-left').innerHTML += logs[Math.floor(Math.random() * logs.length)] + "... OK<br>";
+        document.getElementById('log-right').innerHTML += "0x" + Math.floor(Math.random()*16777215).toString(16).toUpperCase() + "<br>";
+        
+        if(document.getElementById('log-left').childElementCount > 15) {
+            document.getElementById('log-left').innerHTML = "";
+            document.getElementById('log-right').innerHTML = "";
+        }
+    }
+
+    function runFakeLoading() {
+        let progress = 0;
+        const progBar = document.getElementById('prog-bar');
+        const progText = document.getElementById('prog-text');
+        const coreStatus = document.getElementById('core-status');
+        
+        const logInterval = setInterval(updateLogs, 400);
+
+        const loadingInterval = setInterval(() => {
+            progress += Math.random() * 1.5; // Simulate realistic loading
+            
+            if(progress >= 40 && progress < 80) coreStatus.innerText = "DECRYPTING";
+            if(progress >= 80) coreStatus.innerText = "EXTRACTING";
+
+            if (progress >= 98.5) { // The trap triggers right before 100%
+                clearInterval(loadingInterval);
+                clearInterval(logInterval);
+                progBar.style.width = "99.99%";
+                progText.innerText = "99.99% - CRITICAL FAILURE";
+                progText.style.color = "red";
+                
+                setTimeout(triggerHorrorGlitch, 800);
+            } else {
+                progBar.style.width = progress + "%";
+                progText.innerText = progress.toFixed(2) + "%";
+            }
+        }, 100);
+    }
+
+    // --- Audio Synthesis for Glitch Effects ---
+    function playGlitchSound() {
+        if(audioCtx.state === 'suspended') audioCtx.resume();
+        
+        // High pitch screech
+        const osc = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.5);
+        osc.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.5);
+
+        // Low frequency distorted rumble
+        const osc2 = audioCtx.createOscillator();
+        const gain2 = audioCtx.createGain();
+        osc2.type = 'square';
+        osc2.frequency.setValueAtTime(50, audioCtx.currentTime);
+        osc2.frequency.linearRampToValueAtTime(150, audioCtx.currentTime + 2);
+        osc2.connect(gain2);
+        gain2.connect(audioCtx.destination);
+        gain2.gain.setValueAtTime(0.5, audioCtx.currentTime);
+        
+        // Tremolo effect to make it sound "choppy"
+        const lfo = audioCtx.createOscillator();
+        lfo.type = 'square';
+        lfo.frequency.value = 15; // Fast chop
+        lfo.connect(gain2.gain);
+        lfo.start();
+        
+        osc2.start();
+        setTimeout(() => { osc2.stop(); lfo.stop(); }, 4000); // Stop after 4 secs
+    }
+
+    function triggerHorrorGlitch() {
+        playGlitchSound();
+
+        // Visual Destruction
+        document.body.classList.add('glitch-mode');
+        document.getElementById('core-ui').style.display = 'none';
+        document.getElementById('glitch-container').style.display = 'flex';
+
+        // Add extreme screen shake via JS
+        let shakeInterval = setInterval(() => {
+            document.body.style.transform = `translate(${Math.random()*20-10}px, ${Math.random()*20-10}px) skewX(${Math.random()*4-2}deg)`;
+        }, 50);
+
+        // Flood screen with creepy text
+        let floodInterval = setInterval(() => {
+            const txt = document.createElement('div');
+            txt.className = 'flood-text';
+            txt.innerText = scaryLogs[Math.floor(Math.random() * scaryLogs.length)];
+            txt.style.left = Math.random() * 100 + 'vw';
+            txt.style.top = Math.random() * 100 + 'vh';
+            txt.style.transform = `scale(${Math.random() * 2 + 0.5})`;
+            document.body.appendChild(txt);
+            setTimeout(() => txt.remove(), 200);
+        }, 30);
+
+        // End the nightmare
+        setTimeout(() => {
+            clearInterval(shakeInterval);
+            clearInterval(floodInterval);
+            document.body.style.transform = 'none';
+            endGlitchSequence();
+        }, 4000); // Chaos lasts 4 seconds
+    }
+
+    function endGlitchSequence() {
+        document.body.classList.remove('glitch-mode');
+        document.getElementById('glitch-container').style.display = 'none';
+        
+        const apology = document.getElementById('apology-screen');
+        apology.style.opacity = '1';
+        
+        // Final smooth redirect
+        setTimeout(() => {
+            window.location.href = 'puzzlez/puzzle3.htm';
+        }, 10000); // Give them 5 seconds to read the apology
+    }
+
+</script>
+
+</body>
+</html>

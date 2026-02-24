@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MXM TERMINAL</title>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        /* === إعدادات الصفحة الأساسية === */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background-color: #000; 
+            color: #ff0000; /* اللون الأحمر الأساسي */
+            font-family: 'Share Tech Mono', monospace; 
+            overflow: hidden; 
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* === خلفية الماتريكس === */
+        #matrixCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+            opacity: 0.8;
+        }
+
+        /* === الحاوية الرئيسية للنصوص === */
+        #mainContainer {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            width: 100%;
+            display: none; /* مخفي حتى يبدأ العرض */
+        }
+
+        /* === النصوص وتأثيراتها === */
+        .text-element {
+            opacity: 0;
+            text-shadow: 0 0 10px rgba(255, 0, 0, 0.8);
+            margin: 10px 0;
+        }
+
+        #mxm {
+            font-size: 8vw; /* حجم كبير متجاوب */
+            letter-spacing: 15px;
+            font-weight: bold;
+            color: #fff; /* أبيض مع توهج أحمر */
+            text-shadow: 4px 4px 0px #ff0000, 0 0 20px #ff0000;
+            transform: scale(0.9);
+            transition: transform 0.2s;
+        }
+
+        #hello {
+            font-size: 2rem;
+            color: #ddd;
+            margin-top: 20px;
+            letter-spacing: 3px;
+        }
+
+        .scramble-text {
+            font-size: 1.5rem;
+            color: #ff3333;
+            letter-spacing: 5px;
+        }
+
+        /* === زر البداية (لتفعيل ملء الشاشة) === */
+        #startScreen {
+            position: absolute;
+            z-index: 20;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: black;
+            cursor: pointer;
+        }
+        #startBtn {
+            padding: 15px 30px;
+            border: 2px solid #ff0000;
+            background: transparent;
+            color: #ff0000;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 24px;
+            text-transform: uppercase;
+            cursor: pointer;
+            box-shadow: 0 0 15px #ff0000;
+            animation: pulse 1.5s infinite;
+        }
+        #startBtn:hover {
+            background: #ff0000;
+            color: black;
+        }
+
+        /* === تأثيرات CRT (شاشة قديمة) === */
+        .crt::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 99;
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+        }
+        .crt::after {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: rgba(18, 16, 16, 0.1);
+            opacity: 0;
+            z-index: 99;
+            pointer-events: none;
+            animation: flicker 0.15s infinite;
+        }
+
+        /* === Animations === */
+        @keyframes pulse { 0% { opacity: 0.8; box-shadow: 0 0 10px red; } 50% { opacity: 1; box-shadow: 0 0 25px red; } 100% { opacity: 0.8; box-shadow: 0 0 10px red; } }
+        @keyframes flicker { 0% { opacity: 0.02; } 5% { opacity: 0.05; } 10% { opacity: 0.02; } 100% { opacity: 0.02; } }
+        @keyframes glitch { 
+            0% { transform: translate(0); } 
+            20% { transform: translate(-2px, 2px); } 
+            40% { transform: translate(-2px, -2px); } 
+            60% { transform: translate(2px, 2px); } 
+            80% { transform: translate(2px, -2px); } 
+            100% { transform: translate(0); } 
+        }
+        .is-glitching { animation: glitch 0.3s cubic-bezier(.25, .46, .45, .94) both infinite; }
+
+    </style>
+</head>
+<body class="crt">
+
+    <div id="startScreen">
+        <button id="startBtn">[ INITIALIZE SYSTEM ]</button>
+        <p style="margin-top: 10px; opacity: 0.7; font-size: 12px;">CLICK TO START</p>
+    </div>
+
+    <canvas id="matrixCanvas"></canvas>
+
+    <div id="mainContainer">
+        <div id="scramble1" class="text-element scramble-text"></div>
+        <div id="mxm" class="text-element">MXM</div>
+        <div id="scramble2" class="text-element scramble-text"></div>
+        <div id="hello" class="text-element">Hi Kimo, how you doing?</div>
+    </div>
+
+<script>
+    // ===== أدوات التحكم (Helpers) =====
+    const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+    // ===== Matrix Effect Logic =====
+    const canvas = document.getElementById('matrixCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // ضبط حجم الكانفاس
+    function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    const katakana = 'アァカサタナハマヤャラワガザダバパイィキシチニヒミリヰギジヂビピウゥクスツヌフムユュルグズブヅプエェケセテネヘメレヱゲゼデベペオォコソトノホモヨョロヲゴゾドボポヴッン';
+    const latin = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    const nums = '01';
+    const alphabet = katakana + latin + nums;
+    const fontSize = 16;
+    let columns = canvas.width / fontSize;
+    let drops = [];
+
+    function initMatrix() {
+        columns = canvas.width / fontSize;
+        drops = Array(Math.floor(columns)).fill(1);
+    }
+
+    function drawMatrix() {
+        // تأثير الذيل المتلاشي
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = '#ff0000'; // Matrix Color Red
+        ctx.font = fontSize + 'px monospace';
+
+        for (let i = 0; i < drops.length; i++) {
+            const text = alphabet.charAt(Math.floor(Math.random() * alphabet.length));
+            ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+            if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                drops[i] = 0;
+            }
+            drops[i]++;
+        }
+        requestAnimationFrame(drawMatrix);
+    }
+
+    // ===== Scramble Text Effect (تأثير فك التشفير) =====
+    class TextScramble {
+        constructor(el) {
+            this.el = el;
+            this.chars = '!<>-_\\/[]{}—=+*^?#________';
+            this.update = this.update.bind(this);
+        }
+        
+        setText(newText) {
+            const oldText = this.el.innerText;
+            const length = Math.max(oldText.length, newText.length);
+            const promise = new Promise((resolve) => this.resolve = resolve);
+            this.queue = [];
+            for (let i = 0; i < length; i++) {
+                const from = oldText[i] || '';
+                const to = newText[i] || '';
+                const start = Math.floor(Math.random() * 40);
+                const end = start + Math.floor(Math.random() * 40);
+                this.queue.push({ from, to, start, end });
+            }
+            cancelAnimationFrame(this.frameRequest);
+            this.frame = 0;
+            this.update();
+            return promise;
+        }
+        
+        update() {
+            let output = '';
+            let complete = 0;
+            for (let i = 0, n = this.queue.length; i < n; i++) {
+                let { from, to, start, end, char } = this.queue[i];
+                if (this.frame >= end) {
+                    complete++;
+                    output += to;
+                } else if (this.frame >= start) {
+                    if (!char || Math.random() < 0.28) {
+                        char = this.randomChar();
+                        this.queue[i].char = char;
+                    }
+                    output += `<span class="dud">${char}</span>`;
+                } else {
+                    output += from;
+                }
+            }
+            this.el.innerHTML = output;
+            if (complete === this.queue.length) {
+                this.resolve();
+            } else {
+                this.frameRequest = requestAnimationFrame(this.update);
+                this.frame++;
+            }
+        }
+        
+        randomChar() {
+            return this.chars[Math.floor(Math.random() * this.chars.length)];
+        }
+    }
+
+    // ===== التسلسل الزمني للعرض (Timeline) =====
+    async function startSequence() {
+        // 1. إخفاء زر البداية وإظهار الحاوية
+        document.getElementById('startScreen').style.display = 'none';
+        document.getElementById('mainContainer').style.display = 'block';
+        
+        // 2. تشغيل الماتريكس
+        initMatrix();
+        drawMatrix();
+
+        // 3. تعريف العناصر
+        const scramble1 = document.getElementById('scramble1');
+        const mxm = document.getElementById('mxm');
+        const scramble2 = document.getElementById('scramble2');
+        const hello = document.getElementById('hello');
+
+        const fx1 = new TextScramble(scramble1);
+        const fx2 = new TextScramble(scramble2);
+
+        // --- الخطوة 1: كود عشوائي ---
+        scramble1.style.opacity = 1;
+        await fx1.setText("SYSTEM_OVERRIDE: ACTIVATED");
+        await sleep(1000);
+        
+        // --- الخطوة 2: ظهور MXM مع Glitch ---
+        scramble1.style.opacity = 0; // إخفاء النص السابق
+        mxm.style.opacity = 1;
+        mxm.classList.add('is-glitching'); // تفعيل الارتجاج
+        await sleep(500);
+        mxm.classList.remove('is-glitching'); // إيقاف الارتجاج
+        
+        // وميض سريع لـ MXM
+        for(let i=0; i<3; i++) {
+            mxm.style.opacity = 0.2;
+            await sleep(50);
+            mxm.style.opacity = 1;
+            await sleep(100);
+        }
+        
+        await sleep(1500);
+
+        // --- الخطوة 3: كود عشوائي ثاني ---
+        scramble2.style.opacity = 1;
+        await fx2.setText("DECRYPTING USER DATA...");
+        await sleep(1500);
+        scramble2.style.opacity = 0;
+
+        // --- الخطوة 4: رسالة الترحيب ---
+        hello.style.opacity = 1;
+        const fxHello = new TextScramble(hello);
+        await fxHello.setText("Hi Kimo, how you doing?");
+        
+        await sleep(3000); // انتظار قبل النقل
+
+        // --- الخطوة 5: تأثير الخروج والانتقال ---
+        document.body.style.transition = "opacity 2s";
+        document.body.style.opacity = 0;
+        
+        await sleep(2000);
+        
+        // الانتقال للرابط
+        window.location.href = "intro.htm";
+    }
+
+    // ===== التعامل مع ملء الشاشة وبدء النظام =====
+    const startBtn = document.getElementById('startScreen');
+    
+    startBtn.addEventListener('click', () => {
+        // محاولة الدخول في وضع ملء الشاشة
+        const elem = document.documentElement;
+        if (elem.requestFullscreen) {
+            elem.requestFullscreen().catch(err => console.log(err));
+        } else if (elem.webkitRequestFullscreen) { /* Safari */
+            elem.webkitRequestFullscreen();
+        } else if (elem.msRequestFullscreen) { /* IE11 */
+            elem.msRequestFullscreen();
+        }
+
+        // بدء الأنيميشن
+        startSequence();
+    });
+
+</script>
+</body>
+</html>

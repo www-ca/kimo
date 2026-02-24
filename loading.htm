@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MXM | System Core</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #00ff9c;
+            --secondary: #00bfff;
+            --accent: #ff69b4;
+            --bg: #050505;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--primary);
+            font-family: 'JetBrains Mono', monospace;
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        /* خلفية متحركة ناعمة */
+        .bg-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at center, #0a1a1a 0%, #050505 100%);
+            z-index: -1;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 800px;
+            height: 70vh;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(0, 255, 156, 0.2);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+        }
+
+        /* شريط العنوان العلوي */
+        .window-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid rgba(0, 255, 156, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .dots { display: flex; gap: 8px; }
+        .dot { width: 12px; height: 12px; border-radius: 50%; background: rgba(0, 255, 156, 0.2); }
+        .dot.active { background: var(--primary); box-shadow: 0 0 8px var(--primary); }
+
+        #terminal {
+            flex-grow: 1;
+            padding: 30px;
+            overflow-y: auto;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+
+        .line { margin-bottom: 12px; display: flex; align-items: flex-start; opacity: 0; transform: translateY(5px); transition: all 0.3s ease; }
+        .line.visible { opacity: 1; transform: translateY(0); }
+
+        .prompt { color: var(--secondary); margin-right: 12px; font-weight: bold; }
+        .success { color: var(--primary); }
+        .info { color: var(--secondary); }
+        .warn { color: #ffcc00; }
+        .fun { color: var(--accent); }
+
+        /* ستايل الحالة النهائية */
+        #footer-status {
+            padding: 20px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 22px;
+            letter-spacing: 4px;
+            color: var(--primary);
+            text-shadow: 0 0 15px var(--primary);
+            opacity: 0;
+            border-top: 1px solid rgba(0, 255, 156, 0.1);
+        }
+
+        .cursor::after {
+            content: "_";
+            animation: blink 0.8s infinite;
+        }
+
+        @keyframes blink { 50% { opacity: 0; } }
+
+        /* تأثير الخطوط القديمة */
+        .scanlines {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(to bottom, rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 50%);
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        #terminal::-webkit-scrollbar { width: 4px; }
+        #terminal::-webkit-scrollbar-thumb { background: rgba(0, 255, 156, 0.2); border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="bg-overlay"></div>
+<div class="scanlines"></div>
+
+<div class="container">
+    <div class="window-header">
+        <div class="dots">
+            <div class="dot active"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+        </div>
+        <div style="font-size: 12px; opacity: 0.5; letter-spacing: 2px;">SECURE_SHELL // MXM-CORE</div>
+    </div>
+
+    <div id="terminal"></div>
+    <div id="footer-status">SYSTEM READY</div>
+</div>
+
+<script>
+const terminal = document.getElementById("terminal");
+const footer = document.getElementById("footer-status");
+
+const lines = [
+    { text: "CORE_PROCESS_BOOTING...", type: "info" },
+    { text: "----------------------------------------", type: "info" },
+    { text: "CHALLENGE_STATUS: SOLVED_CORRECTLY!", type: "success" },
+    { text: "VALIDATING_NEURAL_STABILITY...", type: "info" },
+    { text: "SUBJECT_ANALYSIS: [KIMO] IDENTIFIED", type: "success" },
+    { text: "BRAIN_WAVES: EVOLVING_BEYOND_EXPECTATION", type: "fun" },
+    { text: "DATA_SYNCING: ████████████ 100%", type: "success" },
+    { text: "CHEATING_PROTECTION: ACTIVE & CLEAN", type: "warn" },
+    { text: "----------------------------------------", type: "info" },
+    { text: "MEMORIES_INITIALIZED: READY", type: "info" },
+    { text: "PREPARING_NEXT_SEQUENCE...", type: "info" },
+    { text: "AUTO_DIFFICULTY: DYNAMIC_ADAPTATION", type: "success" },
+    { text: "NO_OPTION_FOR_FAILURE_HERE.", type: "fun" },
+    { text: "REDIRECTING_TO_REWARD_MODULE...", type: "info" }
+];
+
+async function typeEffect(element, text) {
+    for (let char of text) {
+        element.textContent += char;
+        await new Promise(r => setTimeout(r, 15));
+    }
+}
+
+async function startTerminal() {
+    for (let lineData of lines) {
+        const lineDiv = document.createElement("div");
+        lineDiv.className = `line visible ${lineData.type}`;
+        
+        const promptSpan = document.createElement("span");
+        promptSpan.className = "prompt";
+        promptSpan.textContent = "❯";
+        lineDiv.appendChild(promptSpan);
+
+        const textSpan = document.createElement("span");
+        lineDiv.appendChild(textSpan);
+        terminal.appendChild(lineDiv);
+
+        await typeEffect(textSpan, lineData.text);
+        
+        // إضافة علامة "تم" بعد كل سطر بنجاح
+        if(lineData.type === "success") {
+            const check = document.createElement("span");
+            check.style.marginLeft = "10px";
+            check.textContent = "✓";
+            lineDiv.appendChild(check);
+        }
+
+        await new Promise(r => setTimeout(r, 350));
+        terminal.scrollTop = terminal.scrollHeight;
+    }
+
+    // النهاية الفنية
+    footer.style.opacity = "1";
+    footer.classList.add("cursor");
+    footer.textContent = "SUCCESS: ACCESS GRANTED";
+
+    setTimeout(() => {
+        // تأكد من أن الرابط صحيح لمكافأة كل لغز
+        window.location.href = "reward1.htm";
+    }, 2500);
+}
+
+// البدء بعد تأخير بسيط للشياكة
+setTimeout(startTerminal, 800);
+</script>
+
+</body>
+</html>

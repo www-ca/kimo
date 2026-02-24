@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MXM | Celestial Core</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* الألوان الموحدة مع لغز النجوم */
+            --primary: #e2b07e; 
+            --secondary: #8b6d4d;
+            --accent: #ffffff;
+            --bg: #020204;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--primary);
+            font-family: 'JetBrains Mono', monospace;
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        /* خلفية النجوم المتحركة */
+        #star-canvas {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1;
+            opacity: 0.5;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 850px;
+            height: 75vh;
+            background: rgba(2, 2, 4, 0.85);
+            border: 1px solid rgba(226, 176, 126, 0.3);
+            border-radius: 4px; /* زوايا حادة لتعطي طابعاً رسمياً */
+            backdrop-filter: blur(15px);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 1), inset 0 0 20px rgba(226, 176, 126, 0.05);
+        }
+
+        .window-header {
+            padding: 12px 20px;
+            border-bottom: 1px solid rgba(226, 176, 126, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(226, 176, 126, 0.03);
+        }
+
+        .dots { display: flex; gap: 8px; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; border: 1px solid var(--primary); }
+        .dot.active { background: var(--primary); box-shadow: 0 0 10px var(--primary); }
+
+        #terminal {
+            flex-grow: 1;
+            padding: 35px;
+            overflow-y: auto;
+            font-size: 15px;
+            line-height: 1.8;
+            scrollbar-width: thin;
+            scrollbar-color: var(--secondary) transparent;
+        }
+
+        .line { margin-bottom: 8px; display: flex; align-items: flex-start; opacity: 0; transform: translateX(-10px); transition: all 0.3s ease; }
+        .line.visible { opacity: 1; transform: translateX(0); }
+
+        .prompt { color: var(--secondary); margin-right: 15px; }
+        .success { color: #fff; text-shadow: 0 0 8px var(--primary); }
+        .info { color: var(--primary); opacity: 0.8; }
+        .warn { color: #ffca28; }
+        .cosmic { color: #a5d6ff; font-style: italic; }
+
+        #footer-status {
+            padding: 25px;
+            text-align: center;
+            font-family: 'Cinzel', serif;
+            font-weight: bold;
+            font-size: 1.2rem;
+            letter-spacing: 6px;
+            color: var(--primary);
+            background: rgba(226, 176, 126, 0.05);
+            opacity: 0;
+            transition: 2s;
+        }
+
+        /* تأثير الوميض للـ Cursor */
+        .cursor::after {
+            content: "█";
+            margin-left: 5px;
+            animation: blink 1s infinite;
+        }
+        @keyframes blink { 50% { opacity: 0; } }
+
+        /* تأثير الخطوط الرقمية */
+        .scanlines {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(to bottom, transparent 50%, rgba(226, 176, 126, 0.02) 50%);
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="star-canvas"></canvas>
+<div class="scanlines"></div>
+
+<div class="container">
+    <div class="window-header">
+        <div class="dots">
+            <div class="dot active"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+        </div>
+        <div style="font-size: 11px; opacity: 0.6; letter-spacing: 3px; font-family: 'Cinzel';">COSMIC_OS // STAR_MAP_ANALYZER</div>
+    </div>
+
+    <div id="terminal"></div>
+    <div id="footer-status">CONSTELLATION ALIGNED</div>
+</div>
+
+<script>
+// --- كود خلفية النجوم (لربطها باللغز السابق) ---
+const canvas = document.getElementById('star-canvas');
+const ctx = canvas.getContext('2d');
+let stars = [];
+
+function initStars() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    stars = [];
+    for(let i=0; i<150; i++) {
+        stars.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            size: Math.random() * 1.5,
+            speed: Math.random() * 0.5
+        });
+    }
+}
+
+function animateStars() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#e2b07e";
+    stars.forEach(s => {
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.size, 0, Math.PI*2);
+        ctx.fill();
+        s.y -= s.speed;
+        if(s.y < 0) s.y = canvas.height;
+    });
+    requestAnimationFrame(animateStars);
+}
+initStars();
+animateStars();
+
+// --- كود الـ Terminal المعدل ---
+const terminal = document.getElementById("terminal");
+const footer = document.getElementById("footer-status");
+
+const lines = [
+    { text: "INITIALIZING STAR_CORE_DECODER...", type: "info" },
+    { text: "SCANNING CELESTIAL COORDINATES...", type: "info" },
+    { text: "PATTERN_MATCH: [K] [I] [M] [O] FOUND.", type: "success" },
+    { text: "VIBRATION_LEVEL: STABLE", type: "cosmic" },
+    { text: "--------------------------------------------", type: "info" },
+    { text: "DECODING VOID_SIGNALS...", type: "info" },
+    { text: "SUBJECT: KIMO | STATUS: ASCENDED", type: "success" },
+    { text: "STARS_POSITION: PERFECTLY_ALIGNED", type: "success" },
+    { text: "NEURAL_LINK: 100% SYNCHRONIZED", type: "info" },
+    { text: "--------------------------------------------", type: "info" },
+    { text: "WARNING: final puzzle ?", type: "warn" },
+    { text: "ANALYZING REWARD_PATHWAY...", type: "cosmic" },
+    { text: "ACCESSING THE FINAL GIFT MODULE...", type: "info" },
+    { text: "ENCRYPTION BROKEN. WELCOME, KIMO.", type: "success" }
+];
+
+async function typeEffect(element, text) {
+    for (let char of text) {
+        element.textContent += char;
+        await new Promise(r => setTimeout(r, 20));
+    }
+}
+
+async function startTerminal() {
+    for (let lineData of lines) {
+        const lineDiv = document.createElement("div");
+        lineDiv.className = `line visible ${lineData.type}`;
+        
+        const promptSpan = document.createElement("span");
+        promptSpan.className = "prompt";
+        promptSpan.textContent = "»";
+        lineDiv.appendChild(promptSpan);
+
+        const textSpan = document.createElement("span");
+        lineDiv.appendChild(textSpan);
+        terminal.appendChild(lineDiv);
+
+        await typeEffect(textSpan, lineData.text);
+        
+        if(lineData.type === "success") {
+            const glow = document.createElement("span");
+            glow.style.marginLeft = "10px";
+            glow.textContent = "✦";
+            lineDiv.appendChild(glow);
+        }
+
+        await new Promise(r => setTimeout(r, 400));
+        terminal.scrollTop = terminal.scrollHeight;
+    }
+
+    // تأثير النهاية
+    footer.style.opacity = "1";
+    footer.classList.add("cursor");
+
+    setTimeout(() => {
+        // غيّر هذا الرابط إلى الصفحة التالية
+        window.location.href = "yourfinaltruegift.html"; 
+    }, 4000);
+}
+
+setTimeout(startTerminal, 1000);
+window.addEventListener('resize', initStars);
+</script>
+
+</body>
+</html>

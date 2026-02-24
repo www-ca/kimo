@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The First Reward | Reward</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Montserrat:wght@200;400&family=Playfair+Display:italic,wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <style>
+        :root {
+            --gold: #e2b07e;
+            --rose-gold: #ff9a9e;
+            --deep-bg: #050505;
+            --glass: rgba(255, 255, 255, 0.02);
+            --tech-glow: rgba(226, 176, 126, 0.1);
+        }
+
+        /* تخصيص الـ Scrollbar */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: var(--deep-bg); }
+        ::-webkit-scrollbar-thumb { 
+            background: linear-gradient(to bottom, transparent, var(--gold), transparent);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; cursor: none; }
+
+        body {
+            background-color: var(--deep-bg);
+            color: #ffffff;
+            font-family: 'Montserrat', sans-serif;
+            overflow-x: hidden;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* الماوس المخصص */
+        #cursor {
+            position: fixed;
+            width: 8px; height: 8px;
+            background-color: var(--rose-gold);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 10000;
+            box-shadow: 0 0 10px var(--rose-gold);
+        }
+        #cursor-follower {
+            position: fixed;
+            width: 40px; height: 40px;
+            border: 1px solid rgba(226, 176, 126, 0.3);
+            border-radius: 50%;
+            pointer-events: none;
+            transition: transform 0.1s ease-out;
+            z-index: 10000;
+        }
+
+        /* خلفية Three.js */
+        #canvas-container {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%; z-index: -1;
+            opacity: 0.4;
+        }
+
+        #container {
+            width: 90%;
+            max-width: 900px;
+            padding: 40px 20px;
+            z-index: 10;
+        }
+
+        .main-card {
+            background: var(--glass);
+            backdrop-filter: blur(30px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 50px;
+            padding: 60px 40px;
+            box-shadow: 0 40px 100px rgba(0,0,0,0.8);
+            position: relative;
+            text-align: center;
+            animation: cardFadeIn 2s ease-out;
+        }
+
+        @keyframes cardFadeIn {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .art-title {
+            font-family: 'Cinzel', serif;
+            font-size: 2.2rem;
+            background: linear-gradient(to bottom, #fff, var(--gold));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 40px;
+            letter-spacing: 8px;
+            text-transform: uppercase;
+        }
+
+        /* صندوق الفيديو الفني */
+        .video-wrapper {
+            position: relative;
+            width: 100%;
+            border-radius: 30px;
+            overflow: hidden;
+            margin-bottom: 40px;
+            border: 1px solid rgba(226, 176, 126, 0.2);
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+        }
+
+        video {
+            width: 100%;
+            display: block;
+            filter: sepia(20%) contrast(1.1);
+        }
+
+        .message-zone {
+            font-family: 'Playfair Display', serif;
+            font-style: italic;
+            margin-top: 30px;
+        }
+
+        .greeting {
+            color: var(--rose-gold);
+            font-size: 1.8rem;
+            margin-bottom: 15px;
+            letter-spacing: 2px;
+        }
+
+        .main-text {
+            color: #d1d1d1;
+            font-size: 1.1rem;
+            line-height: 1.8;
+            max-width: 600px;
+            margin: 0 auto 40px auto;
+            font-family: 'Montserrat', sans-serif;
+            font-style: normal;
+            font-weight: 200;
+        }
+
+        #nextBtn {
+            background: transparent;
+            border: 1px solid var(--gold);
+            color: var(--gold);
+            padding: 18px 50px;
+            font-family: 'Cinzel', serif;
+            letter-spacing: 4px;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            transition: 0.5s;
+            border-radius: 100px;
+            cursor: none;
+        }
+
+        #nextBtn:hover {
+            background: var(--gold);
+            color: #000;
+            box-shadow: 0 0 30px var(--tech-glow);
+            transform: translateY(-3px);
+        }
+
+        /* إضافة Scanlines خفيفة للجو العام */
+        .overlay-vibe {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.05) 50%);
+            background-size: 100% 4px;
+            z-index: 100;
+            pointer-events: none;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="cursor"></div>
+    <div id="cursor-follower"></div>
+    <div id="canvas-container"></div>
+    <div class="overlay-vibe"></div>
+
+    <div id="container">
+        <div class="main-card">
+            <h1 class="art-title">The First Reward</h1>
+
+            <div class="video-wrapper">
+                <video id="rewardVideo" controls>
+                    <source src="rewards/reward1.mp4" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            </div>
+
+            <div class="message-zone">
+                <div class="greeting">YO</div>
+                <div class="main-text">
+                    man goodjob first for solving this w thinking and yep it was the easyiest
+                    sooo.. well enjoy your first reward there is still more who knows ? 
+                    anyways did u like my friend ? xd sorry for the first pass code but its true tho :)
+                   white choclate are better anyways he will help you in the next puzzlez as well because
+                  each puzzle will be harder so gl .
+                </div>
+            </div>
+
+            <button id="nextBtn">Continue the puzzlez</button>
+        </div>
+    </div>
+
+<script>
+    // --- 1. Custom Art Mouse ---
+    const cursor = document.getElementById('cursor');
+    const follower = document.getElementById('cursor-follower');
+    
+    document.addEventListener('mousemove', e => {
+        cursor.style.left = e.clientX + 'px';
+        cursor.style.top = e.clientY + 'px';
+        // حركة ناعمة للمتابع
+        setTimeout(() => {
+            follower.style.left = (e.clientX - 20) + 'px';
+            follower.style.top = (e.clientY - 20) + 'px';
+        }, 50);
+    });
+
+    // تكبير الماوس عند الوقوف على الأزرار
+    const btn = document.getElementById('nextBtn');
+    btn.addEventListener('mouseenter', () => follower.style.transform = 'scale(1.5)');
+    btn.addEventListener('mouseleave', () => follower.style.transform = 'scale(1)');
+
+    // --- 2. Three.js Background (Art Particles) ---
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+    const particlesGeometry = new THREE.BufferGeometry();
+    const count = 500;
+    const positions = new Float32Array(count * 3);
+
+    for(let i = 0; i < count * 3; i++) {
+        positions[i] = (Math.random() - 0.5) * 10;
+    }
+
+    particlesGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    const particlesMaterial = new THREE.PointsMaterial({
+        size: 0.015,
+        color: 0xe2b07e,
+        transparent: true,
+        opacity: 0.8
+    });
+
+    const points = new THREE.Points(particlesGeometry, particlesMaterial);
+    scene.add(points);
+    camera.position.z = 3;
+
+    function animate() {
+        requestAnimationFrame(animate);
+        points.rotation.y += 0.001;
+        points.rotation.x += 0.0005;
+        renderer.render(scene, camera);
+    }
+    animate();
+
+    // --- 3. Redirect Logic ---
+    btn.onclick = () => {
+        // تأثير خروج فني
+        document.querySelector('.main-card').style.opacity = '0';
+        document.querySelector('.main-card').style.transform = 'scale(0.9)';
+        document.querySelector('.main-card').style.transition = 'all 1s ease';
+        
+        setTimeout(() => {
+            // غير المسار هنا للمرحلة القادمة
+            window.location.href = "puzzlez/puzzle2.htm"; 
+        }, 1000);
+    };
+
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+</script>
+
+</body>
+</html>

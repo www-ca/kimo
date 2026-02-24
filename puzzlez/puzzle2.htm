@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Amiga: The Philosophical Journey</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Playfair+Display:ital,wght@1,400&family=Montserrat:wght@200&family=Dancing+Script:wght@600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #e2b07e;
+            --rose: #ff9a9e;
+            --bg-color: #050505;
+            --text-color: #ffffff;
+            --danger: #ff4d4d;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; cursor: none; }
+        body { 
+            background-color: var(--bg-color); 
+            color: var(--text-color); 
+            font-family: 'Montserrat', sans-serif; 
+            overflow: hidden; 
+            height: 100vh; 
+        }
+
+        /* Stars & Flying Shapes */
+        #star-canvas { position: fixed; inset: 0; z-index: -3; opacity: 0.6; transition: opacity 2s; }
+        .floating-shape {
+            position: fixed; border: 1px solid rgba(226, 176, 126, 0.15);
+            pointer-events: none; z-index: -2; opacity: 0;
+            animation: floatUp linear forwards;
+        }
+        @keyframes floatUp {
+            0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+            10% { opacity: 0.3; }
+            90% { opacity: 0.3; }
+            100% { transform: translateY(-100px) rotate(360deg); opacity: 0; }
+        }
+
+        /* Memories (Background Images) */
+        .memory-img {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 100vw; height: 100vh; object-fit: cover;
+            opacity: 0; z-index: -1; pointer-events: none;
+            filter: blur(4px) grayscale(60%); mix-blend-mode: overlay;
+            transition: opacity 4s ease-in-out;
+        }
+
+        /* 3D Shapes Container */
+        .shape-container {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            perspective: 1200px; z-index: 0; opacity: 0; transition: opacity 2s;
+        }
+        .shape {
+            width: 200px; height: 200px; position: relative; transform-style: preserve-3d;
+            animation: rotateShape 25s linear infinite;
+        }
+        .shape div {
+            position: absolute; width: 100%; height: 100%;
+            border: 1px solid rgba(226, 176, 126, 0.3);
+            background: rgba(255, 255, 255, 0.01);
+            transition: all 1.5s ease;
+        }
+        @keyframes rotateShape { from { transform: rotateX(0) rotateY(0) rotateZ(0); } to { transform: rotateX(360deg) rotateY(360deg) rotateZ(180deg); } }
+
+        /* Dynamic Notes */
+        .note {
+            position: fixed; width: 75px; height: 75px; border: 1px solid var(--primary);
+            border-radius: 50%; display: flex; justify-content: center; align-items: center;
+            font-family: 'Cinzel', serif; font-size: 1.6rem; color: var(--primary);
+            background: rgba(0,0,0,0.4); backdrop-filter: blur(4px);
+            box-shadow: 0 0 15px rgba(226, 176, 126, 0.2);
+            animation: noteEntry 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            z-index: 100; transition: all 0.3s;
+        }
+        @keyframes noteEntry { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        .note.miss { border-color: var(--danger); color: var(--danger); box-shadow: 0 0 20px rgba(255, 77, 77, 0.5); }
+
+        /* Particles System */
+        .particle {
+            position: absolute; width: 6px; height: 6px; background: var(--primary);
+            border-radius: 50%; pointer-events: none; z-index: 101;
+            box-shadow: 0 0 10px var(--primary);
+            transition: transform 1s cubic-bezier(0.25, 1, 0.5, 1), opacity 1s;
+        }
+
+        /* Progress Bar & The Eye */
+        #path-container { position: fixed; bottom: 50px; left: 15%; width: 70%; height: 1px; background: rgba(128,128,128,0.2); z-index: 50; }
+        #progress-bar { position: absolute; height: 100%; width: 0%; background: var(--primary); box-shadow: 0 0 15px var(--primary); transition: width 0.1s linear; }
+        
+        .eye-container {
+            position: absolute; right: -15px; top: -14px; width: 30px; height: 30px;
+            border: 2px solid var(--primary); border-radius: 50%; background: var(--bg-color);
+            display: flex; justify-content: center; align-items: center; box-shadow: 0 0 20px rgba(226, 176, 126, 0.4);
+            transition: background 0.5s, box-shadow 0.2s;
+        }
+        .pupil {
+            width: 8px; height: 8px; background: var(--rose); border-radius: 50%;
+            transition: transform 0.1s ease-out; box-shadow: 0 0 8px var(--rose);
+        }
+
+        /* Whispers & Intro/Outro */
+        #intro, #outro {
+            position: fixed; inset: 0; background: var(--bg-color);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 1000; transition: opacity 3s ease, background-color 0.5s ease;
+        }
+        #outro { opacity: 0; pointer-events: none; background: transparent; }
+        
+        #start-btn {
+            background: none; border: 1px solid var(--primary); color: var(--primary);
+            padding: 15px 40px; font-family: 'Cinzel', serif; letter-spacing: 4px;
+            transition: 0.4s; margin-top: 20px; font-size: 1.2rem; cursor: none;
+        }
+        #start-btn:hover { background: var(--primary); color: #000; box-shadow: 0 0 30px var(--primary); transform: translateY(-5px); }
+
+        .whisper-text {
+            position: fixed; top: 30%; width: 100%; text-align: center;
+            font-family: 'Playfair Display', serif; font-size: 2.2rem; font-style: italic;
+            color: var(--text-color); opacity: 0; transition: opacity 2s ease, transform 2s ease; pointer-events: none;
+            text-shadow: 0 0 20px rgba(255,255,255,0.2); z-index: 10;
+        }
+
+        .final-message {
+            font-family: 'Dancing Script', cursive; font-size: 3.5rem; color: #000;
+            text-shadow: 0 0 20px rgba(0,0,0,0.1); opacity: 0; transition: opacity 4s ease;
+        }
+
+        #lives { position: fixed; top: 40px; right: 40px; font-family: 'Cinzel', serif; color: var(--text-color); font-size: 1.1rem; letter-spacing: 2px; z-index: 100; transition: color 0.5s; }
+        #cursor { position: fixed; width: 12px; height: 12px; border: 2px solid var(--primary); border-radius: 50%; pointer-events: none; z-index: 9999; }
+        #cursor::after { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 4px; height: 4px; background: var(--rose); border-radius: 50%; }
+
+    </style>
+</head>
+<body>
+
+    <div id="cursor"></div>
+    <canvas id="star-canvas"></canvas>
+
+    <img src="4.png" id="memory1" class="memory-img">
+    <img src="5.png" id="memory2" class="memory-img">
+
+    <div id="intro">
+        <h1 style="font-family: 'Cinzel', serif; font-size: 4rem; letter-spacing: 15px; color: var(--primary);">AMIGA</h1>
+        <p style="font-family: 'Montserrat'; letter-spacing: 3px; color: #888; font-size: 0.9rem; margin-top:10px;">FEEL THE RHYTHM</p>
+        <button id="start-btn">AWAKEN</button>
+    </div>
+
+    <div id="outro">
+        <p class="final-message" id="final-msg">Evolution is not about becoming someone else. It's about breaking the corners of the cube to find the infinity within you.<br>M.X.M.</p>
+                                                <p1> here is your code mxmmxmxmmxmxmxmxmmxmxm47653984413338404mxm462447</p1>
+    </div>
+
+    <div id="lives">INTEGRITY: ❤️ ❤️ ❤️ ❤️ ❤️</div>
+    <div id="whisper" class="whisper-text"></div>
+
+    <div class="shape-container" id="shape-view">
+        <div class="shape" id="dynamic-shape"></div>
+    </div>
+
+    <div id="path-container">
+        <div id="progress-bar">
+            <div class="eye-container" id="eye"><div class="pupil" id="eye-pupil"></div></div>
+        </div>
+    </div>
+
+    <audio id="bg-music">
+        <source src="detroit.mp3" type="audio/mp3"> 
+    </audio>
+
+    <script>
+        const music = document.getElementById('bg-music');
+        const startBtn = document.getElementById('start-btn');
+        const intro = document.getElementById('intro');
+        const outro = document.getElementById('outro');
+        const finalMsg = document.getElementById('final-msg');
+        const progressBar = document.getElementById('progress-bar');
+        const whisper = document.getElementById('whisper');
+        const shapeView = document.getElementById('shape-view');
+        const dynamicShape = document.getElementById('dynamic-shape');
+        const pupil = document.getElementById('eye-pupil');
+        const eyeContainer = document.getElementById('eye');
+        const root = document.documentElement;
+
+        let score = 0, lives = 5, gameActive = false;
+        let activeNotes = [], mouseX = 0, mouseY = 0;
+        let isReading = false; // لوقف اللعبة قليلا أثناء القراءة
+
+        // الرسائل موزعة على طول الأغنية
+        const messages = [
+            { ratio: 0.12, text: "acube is a symbol of how it started..." },
+            { ratio: 0.25, text: "alost cube needed something to be filled with." },
+            { ratio: 0.40, text: "and slowly it became atriangle." },
+            { ratio: 0.55, text: "the black world starts to be changing." },
+            { ratio: 0.68, text: "And memories remind us why we endure." },
+            { ratio: 0.82, text: "it became ball...aperfect one." },
+            { ratio: 0.92, text: "and a new world was created after." }
+
+        ];
+
+        let nextSpawnTime = 4.0; 
+
+        // تتبع الماوس
+        document.addEventListener('mousemove', e => {
+            mouseX = e.clientX; mouseY = e.clientY;
+            const cursor = document.getElementById('cursor');
+            cursor.style.left = (mouseX - 6) + 'px';
+            cursor.style.top = (mouseY - 6) + 'px';
+
+            if(gameActive) {
+                const rect = pupil.getBoundingClientRect();
+                const angle = Math.atan2(mouseY - (rect.top + rect.height/2), mouseX - (rect.left + rect.width/2));
+                const dist = Math.min(4, Math.hypot(mouseX - rect.left, mouseY - rect.top) / 50);
+                pupil.style.transform = `translate(${Math.cos(angle) * dist}px, ${Math.sin(angle) * dist}px)`;
+            }
+        });
+
+        startBtn.onclick = () => {
+            intro.style.opacity = '0';
+            setTimeout(() => {
+                intro.style.display = 'none';
+                gameActive = true;
+                music.play();
+                drawStars();
+                spawnFloatingShapes();
+                buildCube();
+                shapeView.style.opacity = '1';
+                gameLoop();
+            }, 2000);
+        };
+
+        function gameLoop() {
+            if (!gameActive) return;
+
+            const time = music.currentTime;
+            const duration = music.duration || 120; // 120 افتراضي
+            const ratio = time / duration;
+
+            // 1. Progress Bar
+            progressBar.style.width = (ratio * 100) + "%";
+
+            // 2. Ultra-Smooth White Transition (تبدأ تفتح بنعومة بعد نص الأغنية)
+            let colorVal = 5;
+            if (ratio > 0.4) {
+                let progress = (ratio - 0.4) / 0.55; // بيكمل للآخر عند 95%
+                if (progress > 1) progress = 1;
+                // دالة تنعيم (Ease in-out)
+                let ease = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+                colorVal = Math.floor(5 + (250 * ease));
+            }
+            let textVal = 255 - colorVal;
+            root.style.setProperty('--bg-color', `rgb(${colorVal}, ${colorVal}, ${colorVal})`);
+            root.style.setProperty('--text-color', `rgb(${textVal}, ${textVal}, ${textVal})`);
+
+            // 3. Pulse Sync (النبض مع الإيقاع)
+            // نبض هادئ يمثل القلب (Pulse effect)
+            const pulse = 1 + Math.sin(time * 2) * 0.05; 
+            shapeView.style.transform = `translate(-50%, -50%) scale(${pulse})`;
+
+            // 4. الذكريات (Memories Fade In/Out)
+            const mem1 = document.getElementById('memory1');
+            const mem2 = document.getElementById('memory2');
+            mem1.style.opacity = (ratio > 0.35 && ratio < 0.48) ? '0.3' : '0';
+            mem2.style.opacity = (ratio > 0.60 && ratio < 0.73) ? '0.3' : '0';
+
+            // 5. تطور الأشكال الـ 3D
+            if(ratio > 0.35 && dynamicShape.dataset.stage !== '2') buildPyramid();
+            if(ratio > 0.70 && dynamicShape.dataset.stage !== '3') buildRings();
+
+            // 6. إدارة الرسائل (مع إعطاء وقت للقراءة)
+            messages.forEach(msg => {
+                if (ratio >= msg.ratio && !msg.shown) {
+                    msg.shown = true;
+                    isReading = true; // تبطئة اللعب
+                    whisper.innerText = msg.text;
+                    whisper.style.opacity = '1';
+                    whisper.style.transform = 'translateY(-20px)';
+                    
+                    setTimeout(() => { 
+                        whisper.style.opacity = '0'; 
+                        whisper.style.transform = 'translateY(0)'; 
+                        isReading = false; // استكمال الرتم
+                    }, 4000);
+                }
+            });
+
+            // 7. نظام التوليد الموزون للرتم
+            if (time >= nextSpawnTime && ratio < 0.95) {
+                spawnNote();
+                // تحديد سرعة التوليد بناء على الأغنية والقراءة
+                let interval = 3.0; // البداية بطيئة
+                if(ratio > 0.2) interval = 2.2;
+                if(ratio > 0.5) interval = 1.5; // السرعة في المنتصف
+                if(ratio > 0.8) interval = 2.5; // تهدئة قبل النهاية
+                if(isReading) interval += 1.5; // إعطاء مساحة لقراءة الرسائل
+
+                nextSpawnTime = time + interval;
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function spawnNote() {
+            const keys = ['A','S','D','F','W','E','K','I','M','O'];
+            const char = keys[Math.floor(Math.random() * keys.length)];
+            
+            const btn = document.createElement('div');
+            btn.className = 'note';
+            btn.innerText = char;
+            
+            btn.style.left = (15 + Math.random() * 70) + "%";
+            btn.style.top = (15 + Math.random() * 60) + "%";
+            
+            document.body.appendChild(btn);
+            const noteObj = { char, element: btn };
+            activeNotes.push(noteObj);
+
+            // وقت الانتظار بناء على الرتم
+            const timeToPress = isReading ? 4000 : Math.max(1800, 3500 - (music.currentTime * 10));
+            
+            noteObj.timer = setTimeout(() => {
+                if (activeNotes.includes(noteObj)) handleMiss(noteObj);
+            }, timeToPress);
+        }
+
+        window.onkeydown = (e) => {
+            if (!gameActive || activeNotes.length === 0) return;
+            const pressedKey = e.key.toUpperCase();
+            const targetIndex = activeNotes.findIndex(n => n.char === pressedKey);
+            
+            if (targetIndex !== -1) {
+                const note = activeNotes[targetIndex];
+                clearTimeout(note.timer);
+                activeNotes.splice(targetIndex, 1);
+                
+                // جلب مكان الزرار لعمل الانفجار
+                const rect = note.element.getBoundingClientRect();
+                createParticles(rect.left + rect.width/2, rect.top + rect.height/2);
+
+                note.element.style.transform = "scale(1.5)";
+                note.element.style.opacity = "0";
+                setTimeout(() => note.element.remove(), 300);
+                score++;
+            } else if (['A','S','D','F','W','E','K','I','M','O'].includes(pressedKey)) {
+                handleMiss(activeNotes[0]);
+            }
+        };
+
+        // Particle System (إرسال طاقة للعين)
+        function createParticles(x, y) {
+            const eyeRect = eyeContainer.getBoundingClientRect();
+            const targetX = eyeRect.left + eyeRect.width/2;
+            const targetY = eyeRect.top + eyeRect.height/2;
+
+            for(let i=0; i<8; i++) {
+                const p = document.createElement('div');
+                p.className = 'particle';
+                p.style.left = x + 'px';
+                p.style.top = y + 'px';
+                document.body.appendChild(p);
+
+                // حركة عشوائية قبل التوجه للعين
+                const angle = Math.random() * Math.PI * 2;
+                const dist = Math.random() * 50 + 20;
+                const midX = x + Math.cos(angle) * dist;
+                const midY = y + Math.sin(angle) * dist;
+
+                setTimeout(() => {
+                    p.style.transform = `translate(${targetX - x}px, ${targetY - y}px)`;
+                    p.style.opacity = '0';
+                }, 50);
+
+                setTimeout(() => p.remove(), 1050);
+            }
+
+            // وميض العين لما تستقبل الجزيئات
+            setTimeout(() => {
+                eyeContainer.style.boxShadow = "0 0 40px var(--primary)";
+                setTimeout(() => eyeContainer.style.boxShadow = "0 0 20px rgba(226, 176, 126, 0.4)", 200);
+            }, 800);
+        }
+
+        function handleMiss(noteObj) {
+            const index = activeNotes.indexOf(noteObj);
+            if(index > -1) activeNotes.splice(index, 1);
+            
+            noteObj.element.classList.add('miss');
+            setTimeout(() => noteObj.element.remove(), 500);
+            
+            lives--;
+            updateLivesUI();
+            
+            // Glitch Effect
+            document.body.style.transform = "skewX(2deg) translateX(10px)";
+            document.body.style.filter = "hue-rotate(90deg) blur(2px)";
+            setTimeout(() => {
+                document.body.style.transform = "none";
+                document.body.style.filter = "none";
+            }, 150);
+
+            if (lives <= 0) endGame("SYSTEM FRACTURED", false);
+        }
+
+        function updateLivesUI() {
+            let h = "INTEGRITY: ";
+            for(let i=0; i<lives; i++) h += "❤️ ";
+            document.getElementById('lives').innerText = h;
+        }
+
+        /* 3D Shapes & Particles Background */
+        function buildCube() {
+            dynamicShape.dataset.stage = '1';
+            dynamicShape.innerHTML = `
+                <div style="transform: translateZ(100px);"></div>
+                <div style="transform: rotateY(180deg) translateZ(100px);"></div>
+                <div style="transform: rotateY(90deg) translateZ(100px);"></div>
+                <div style="transform: rotateY(-90deg) translateZ(100px);"></div>
+                <div style="transform: rotateX(90deg) translateZ(100px);"></div>
+                <div style="transform: rotateX(-90deg) translateZ(100px);"></div>
+            `;
+        }
+
+        function buildPyramid() {
+            dynamicShape.dataset.stage = '2';
+            dynamicShape.style.transform = "scale(0.8)";
+            dynamicShape.innerHTML = `
+                <div style="clip-path: polygon(50% 0%, 0% 100%, 100% 100%); transform: translateZ(50px) rotateX(30deg); transform-origin: bottom;"></div>
+                <div style="clip-path: polygon(50% 0%, 0% 100%, 100% 100%); transform: rotateY(90deg) translateZ(50px) rotateX(30deg); transform-origin: bottom;"></div>
+                <div style="clip-path: polygon(50% 0%, 0% 100%, 100% 100%); transform: rotateY(180deg) translateZ(50px) rotateX(30deg); transform-origin: bottom;"></div>
+                <div style="clip-path: polygon(50% 0%, 0% 100%, 100% 100%); transform: rotateY(-90deg) translateZ(50px) rotateX(30deg); transform-origin: bottom;"></div>
+            `;
+        }
+
+        function buildRings() {
+            dynamicShape.dataset.stage = '3';
+            dynamicShape.innerHTML = `
+                <div style="border-radius: 50%; transform: rotateX(45deg);"></div>
+                <div style="border-radius: 50%; transform: rotateY(45deg);"></div>
+                <div style="border-radius: 50%; transform: rotateZ(45deg) rotateX(90deg);"></div>
+            `;
+        }
+
+        function spawnFloatingShapes() {
+            setInterval(() => {
+                if(!gameActive) return;
+                const shape = document.createElement('div');
+                shape.className = 'floating-shape';
+                const size = Math.random() * 50 + 20;
+                shape.style.width = size + 'px';
+                shape.style.height = size + 'px';
+                shape.style.left = Math.random() * 100 + 'vw';
+                shape.style.borderRadius = Math.random() > 0.5 ? '50%' : '0%';
+                shape.style.animationDuration = (Math.random() * 10 + 10) + 's';
+                document.body.appendChild(shape);
+                setTimeout(() => shape.remove(), 20000);
+            }, 2000);
+        }
+
+        function drawStars() {
+            const canvas = document.getElementById('star-canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+            const stars = Array(150).fill().map(() => ({
+                x: Math.random() * canvas.width, y: Math.random() * canvas.height,
+                s: Math.random() * 2, speed: Math.random() * 0.5 + 0.1
+            }));
+
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = getComputedStyle(root).getPropertyValue('--text-color');
+                stars.forEach(star => {
+                    ctx.beginPath(); ctx.arc(star.x, star.y, star.s, 0, Math.PI * 2); ctx.fill();
+                    star.y -= star.speed;
+                    if (star.y < 0) star.y = canvas.height;
+                });
+                if(gameActive) requestAnimationFrame(animate);
+            }
+            animate();
+        }
+
+        function endGame(msg, success = false) {
+            gameActive = false;
+            activeNotes.forEach(n => clearTimeout(n.timer));
+            document.querySelectorAll('.note, .particle').forEach(n => n.remove());
+            
+            if (!success) {
+                music.pause();
+                intro.style.display = 'flex';
+                intro.style.opacity = '1';
+                intro.style.background = getComputedStyle(root).getPropertyValue('--bg-color');
+                intro.innerHTML = `<h1 style="color:var(--danger); font-family:Cinzel;">${msg}</h1>
+                <p style="color:var(--text-color); margin:20px; font-size:1.5rem;">Take a breath. Try again.</p>
+                <button onclick="location.reload()" id="start-btn" style="cursor:none; border-color:var(--danger); color:var(--danger);">REBOOT</button>`;
+            } else {
+                // النهاية العاطفية الملساء
+                shapeView.style.opacity = '0';
+                document.getElementById('lives').style.opacity = '0';
+                document.getElementById('path-container').style.opacity = '0';
+                
+                outro.style.pointerEvents = 'auto';
+                outro.style.opacity = '1';
+                
+                // ظهور الرسالة بخط اليد بهدوء بعد ثانيتين
+                setTimeout(() => {
+                    finalMsg.style.opacity = '1';
+                }, 2000);
+            }
+        }
+
+        music.onended = () => endGame("COMPLETE", true);
+    </script>
+</body>
+</html>

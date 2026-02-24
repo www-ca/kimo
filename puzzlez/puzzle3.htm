@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>puzzle3</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Montserrat:wght@200&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: #e2b07e; --bg: #020204; }
+        * { margin: 0; padding: 0; box-sizing: border-box; cursor: none; }
+        body { background: var(--bg); color: white; font-family: 'Montserrat', sans-serif; overflow: hidden; height: 100vh; }
+        
+        #canvas { position: fixed; inset: 0; z-index: 1; }
+
+        /* The Watcher */
+        .watcher-container { position: fixed; top: 30px; left: 30px; width: 70px; height: 70px; z-index: 100; opacity: 0.6; pointer-events: none; transition: opacity 2s; }
+        .watcher-eye { position: relative; width: 100%; height: 50%; background: radial-gradient(ellipse at center, #fff 0%, var(--primary) 40%, transparent 80%); border-radius: 50% 10%; transform: rotate(45deg); display: flex; justify-content: center; align-items: center; border: 1px solid rgba(255,255,255,0.1); }
+        .pupil { width: 14px; height: 14px; background: #000; border-radius: 50%; border: 1px solid var(--primary); transition: 0.1s; }
+
+        /* Intro Sequence */
+        #intro-sequence { position: fixed; inset: 0; background: var(--bg); z-index: 3000; display: flex; justify-content: center; align-items: center; transition: opacity 1.5s ease-in-out; }
+        .intro-msg { position: absolute; font-family: 'Montserrat', sans-serif; font-size: 1.5rem; color: var(--primary); letter-spacing: 2px; text-align: center; opacity: 0; transition: opacity 1.5s ease-in-out; padding: 0 20px; font-weight: 200; }
+
+        #start-menu { position: fixed; inset: 0; background: var(--bg); z-index: 1000; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: 1.5s; }
+        .title { font-family: 'Cinzel', serif; font-size: 3rem; letter-spacing: 20px; color: var(--primary); margin-bottom: 30px; text-shadow: 0 0 20px rgba(226,176,126,0.5); }
+        
+        /* Hint Styling */
+        .hint-box { margin-top: 40px; text-align: center; opacity: 0.3; transition: 0.5s; }
+        .hint-box:hover { opacity: 0.8; }
+        .hint-text { font-size: 0.7rem; letter-spacing: 3px; color: var(--primary); margin-bottom: 10px; display: block; }
+        .constellation-hint { width: 200px; height: 60px; stroke: var(--primary); fill: none; stroke-width: 0.5; opacity: 0.5; }
+
+        .start-btn { background: transparent; border: 1px solid var(--primary); color: var(--primary); padding: 12px 35px; font-family: 'Cinzel'; cursor: pointer; transition: 0.4s; letter-spacing: 5px; z-index: 1001; }
+        .start-btn:hover { background: var(--primary); color: #000; box-shadow: 0 0 30px var(--primary); }
+
+        #flash-overlay { position: fixed; inset: 0; background: white; z-index: 1500; opacity: 0; pointer-events: none; transition: opacity 2.5s ease-in; }
+        #success-screen { position: fixed; inset: 0; background: #000; z-index: 2000; display: flex; justify-content: center; align-items: center; opacity: 0; visibility: hidden; transition: 3s ease-out; }
+        .final-msg { color: var(--primary); font-family: 'Cinzel'; font-size: 2.5rem; letter-spacing: 12px; text-align: center; text-shadow: 0 0 30px rgba(226,176,126,0.5); }
+
+        #cursor { position: fixed; width: 4px; height: 4px; background: #fff; border-radius: 50%; z-index: 9999; pointer-events: none; transition: opacity 1s; }
+        #cursor-ring { position: fixed; width: 100px; height: 100px; border: 1px solid rgba(226, 176, 126, 0.1); background: radial-gradient(circle, rgba(226,176,126,0.08) 0%, transparent 70%); border-radius: 50%; z-index: 9998; pointer-events: none; transition: transform 0.1s ease-out, opacity 1s; }
+
+        @keyframes shake {
+            0% { transform: translate(2px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+        .shake-active { animation: shake 0.4s infinite; }
+    </style>
+</head>
+<body>
+
+    <div id="cursor"></div>
+    <div id="cursor-ring"></div>
+    <div id="flash-overlay"></div>
+
+    <div id="intro-sequence">
+        <h2 class="intro-msg">Sry amiga about what happend ai who gave me this idea tho :)</h2>
+        <h2 class="intro-msg">well now you are going to the final puzzle</h2>
+        <h2 class="intro-msg">and after it you gonna get your reward fr this time</h2>
+        <h2 class="intro-msg">goodluck</h2>
+    </div>
+
+    <div id="start-menu">
+        <h1 class="title">OPEN YOUR MIND</h1>
+        <button class="start-btn" onclick="startExperience()">ILLUMINATE</button>
+        
+        <div class="hint-box">
+            <span class="hint-text">HINT: TRACE THE STARS</span>
+            <svg class="constellation-hint" viewBox="0 0 300 60">
+                <path d="M20,10 L20,50 M20,30 L40,10 M20,30 L40,50" />
+                <path d="M70,10 L70,50" />
+                <path d="M100,50 L100,10 L120,30 L140,10 L140,50" />
+                <circle cx="185" cy="30" r="20" />
+            </svg>
+        </div>
+    </div>
+
+    <div class="watcher-container" id="watcher">
+        <div class="watcher-eye"><div class="pupil" id="pupil"></div></div>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <div id="success-screen">
+        <h1 class="final-msg">GJJJ KIMO NOW LETS SEE<br><span style="font-size: 1rem; opacity: 0.5;">THE STARS HAVE ALIGNED</span></h1>
+    </div>
+
+    <script>
+        // Intro Sequence Logic
+        window.addEventListener('load', () => {
+            const msgs = document.querySelectorAll('.intro-msg');
+            const introDiv = document.getElementById('intro-sequence');
+            
+            // Timings for each message to appear (0s, 3.5s, 7s, 10.5s)
+            const timings = [500, 4000, 7500, 11000]; 
+            
+            msgs.forEach((msg, index) => {
+                setTimeout(() => {
+                    msg.style.opacity = '1'; // Fade in
+                    
+                    // Fade out before the next message
+                    setTimeout(() => {
+                        msg.style.opacity = '0';
+                    }, 2500); 
+                }, timings[index]);
+            });
+
+            // Fade out the entire black intro screen at 14.5 seconds
+            setTimeout(() => {
+                introDiv.style.opacity = '0';
+                setTimeout(() => {
+                    introDiv.style.display = 'none';
+                }, 1500); // Wait for fade out to finish before removing from layout
+            }, 14500);
+        });
+
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let width, height, stars = [], connections = [], isDrawing = false, startStar = null;
+        let mouse = { x: -1000, y: -1000 };
+        let gameWon = false;
+        let endingPhase = 0;
+
+        const letterReqs = {
+            'K': { edges: [['K0','K2'],['K1','K2'],['K2','K3'],['K2','K4']] },
+            'I': { edges: [['I0','I1']] },
+            'M': { edges: [['M0','M1'],['M1','M2'],['M2','M3'],['M3','M4']] },
+            'O': { edges: [['O0','O1'],['O1','O2'],['O2','O3'],['O3','O4'],['O4','O5'],['O5','O0']] }
+        };
+        let solved = { K: false, I: false, M: false, O: false };
+
+        class Star {
+            constructor(x, y, letter = null, id = null) {
+                this.x = x; this.y = y;
+                this.letter = letter; this.id = id;
+                this.size = letter ? 2.5 : Math.random() * 1.5;
+                this.blink = Math.random() * Math.PI * 2;
+                this.driftX = (Math.random() - 0.5) * 0.2;
+                this.driftY = (Math.random() - 0.5) * 0.2;
+                this.angle = Math.atan2(this.y - window.innerHeight/2, this.x - window.innerWidth/2);
+                this.speedMultiplier = 1;
+            }
+            update() {
+                this.blink += 0.03;
+                if (!this.letter) {
+                    if (endingPhase === 1) {
+                        this.speedMultiplier += 0.2;
+                        this.x += (Math.cos(this.angle) * this.speedMultiplier) + (Math.random() - 0.5) * 5;
+                        this.y += (Math.sin(this.angle) * this.speedMultiplier) + (Math.random() - 0.5) * 5;
+                    } else {
+                        this.x += this.driftX; this.y += this.driftY;
+                    }
+                }
+            }
+            draw() {
+                const dist = Math.hypot(this.x - mouse.x, this.y - mouse.y);
+                ctx.beginPath();
+                if (this.letter) {
+                    const flashlight = Math.pow(Math.max(0, 1 - dist / 130), 2);
+                    const isSolved = solved[this.letter];
+                    ctx.arc(this.x, this.y, this.size * (1 + flashlight), 0, Math.PI * 2);
+                    ctx.fillStyle = isSolved ? `rgba(226, 176, 126, 1)` : `rgba(226, 176, 126, ${0.03 + flashlight})`;
+                    if (flashlight > 0.1 || isSolved) {
+                        ctx.shadowBlur = isSolved ? 15 : 20 * flashlight;
+                        ctx.shadowColor = "var(--primary)";
+                    }
+                } else {
+                    const brightness = endingPhase === 1 ? 1 : 0.2 + (Math.sin(this.blink) + 1) * 0.3;
+                    let drawSize = endingPhase === 1 ? this.size * 2 : this.size;
+                    ctx.arc(this.x, this.y, drawSize, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(255, 255, 255, ${brightness})`;
+                }
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        function init() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            stars = []; connections = [];
+            const cx = width / 2; const cy = height / 2;
+            const pts = {
+                'K': [{x:-280,y:-80},{x:-280,y:80},{x:-280,y:0},{x:-220,y:-80},{x:-220,y:80}],
+                'I': [{x:-150,y:-80},{x:-150,y:80}],
+                'M': [{x:-80,y:80},{x:-80,y:-80},{x:0,y:0},{x:80,y:-80},{x:80,y:80}],
+                'O': [{x:180,y:-40},{x:230,y:-80},{x:280,y:-40},{x:280,y:40},{x:230,y:80},{x:180,y:40}]
+            };
+            Object.keys(pts).forEach(L => {
+                pts[L].forEach((p, i) => stars.push(new Star(cx + p.x, cy + p.y, L, L + i)));
+            });
+            for(let i=0; i<600; i++) stars.push(new Star(Math.random()*width, Math.random()*height));
+        }
+
+        window.addEventListener('mousemove', e => {
+            if (endingPhase > 0) return;
+            mouse.x = e.clientX; mouse.y = e.clientY;
+            document.getElementById('cursor').style.transform = `translate(${mouse.x}px, ${mouse.y}px)`;
+            document.getElementById('cursor-ring').style.transform = `translate(${mouse.x-50}px, ${mouse.y-50}px)`;
+            const pupil = document.getElementById('pupil');
+            const angle = Math.atan2(mouse.y - 50, mouse.x - 50);
+            pupil.style.transform = `translate(${Math.cos(angle)*6}px, ${Math.sin(angle)*6}px)`;
+        });
+
+        window.addEventListener('mousedown', () => {
+            if (endingPhase > 0) return;
+            const hit = stars.find(s => s.letter && Math.hypot(s.x - mouse.x, s.y - mouse.y) < 25);
+            if (hit) { isDrawing = true; startStar = hit; }
+        });
+
+        window.addEventListener('mouseup', () => {
+            if (isDrawing) {
+                const endStar = stars.find(s => s.letter && s !== startStar && Math.hypot(s.x - mouse.x, s.y - mouse.y) < 25);
+                if (endStar && endStar.letter === startStar.letter) {
+                    const id = [startStar.id, endStar.id].sort().join('-');
+                    if (!connections.some(c => c.id === id)) {
+                        connections.push({ from: startStar, to: endStar, id, letter: startStar.letter });
+                        checkLetter(startStar.letter);
+                    }
+                }
+            }
+            isDrawing = false; startStar = null;
+        });
+
+        function checkLetter(L) {
+            const req = letterReqs[L];
+            const has = connections.filter(c => c.letter === L);
+            const matches = req.edges.filter(e => has.some(h => h.id === e.sort().join('-'))).length;
+            if (matches === req.edges.length) {
+                solved[L] = true;
+                if (Object.values(solved).every(v => v) && !gameWon) {
+                    gameWon = true;
+                    triggerEndingSequence();
+                }
+            }
+        }
+
+        function triggerEndingSequence() {
+            document.getElementById('cursor').style.opacity = '0';
+            document.getElementById('cursor-ring').style.opacity = '0';
+            document.getElementById('watcher').style.opacity = '0';
+            setTimeout(() => {
+                endingPhase = 1;
+                document.body.classList.add('shake-active');
+                setTimeout(() => {
+                    document.getElementById('flash-overlay').style.opacity = '1';
+                    setTimeout(() => {
+                        document.body.classList.remove('shake-active');
+                        document.getElementById('success-screen').style.visibility = "visible";
+                        document.getElementById('success-screen').style.opacity = "1";
+                        document.getElementById('flash-overlay').style.opacity = '0';
+                        setTimeout(() => { window.location.href = "yourfinaltruegift.htm"; }, 5000);
+                    }, 2500);
+                }, 2000);
+            }, 1000);
+        }
+
+        function animate() {
+            ctx.fillStyle = 'rgba(2, 2, 4, 0.3)';
+            ctx.fillRect(0, 0, width, height);
+            stars.forEach(s => { s.update(); s.draw(); });
+            connections.forEach(c => {
+                ctx.beginPath();
+                ctx.moveTo(c.from.x, c.from.y);
+                ctx.lineTo(c.to.x, c.to.y);
+                const isSolved = solved[c.letter];
+                ctx.strokeStyle = isSolved ? "rgba(226, 176, 126, 0.8)" : "rgba(226, 176, 126, 0.2)";
+                ctx.lineWidth = isSolved ? 2 : 1;
+                ctx.stroke();
+            });
+            if (isDrawing && startStar) {
+                ctx.beginPath(); ctx.moveTo(startStar.x, startStar.y); ctx.lineTo(mouse.x, mouse.y);
+                ctx.strokeStyle = "rgba(255,255,255,0.1)";
+                ctx.setLineDash([5, 5]); ctx.stroke(); ctx.setLineDash([]);
+            }
+            requestAnimationFrame(animate);
+        }
+
+        function startExperience() {
+            document.getElementById('start-menu').style.opacity = '0';
+            setTimeout(() => {
+                document.getElementById('start-menu').style.display = 'none';
+                init();
+                animate();
+            }, 1000);
+        }
+        window.addEventListener('resize', init);
+    </script>
+</body>
+</html>

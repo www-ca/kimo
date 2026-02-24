@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MXM Terminal</title>
+    <style>
+        body {
+            background: #000;
+            color: #00ff9c;
+            font-family: "Courier New", monospace;
+            padding: 30px;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+        }
+
+        #terminal {
+            flex-grow: 1;
+            max-width: 900px;
+            margin: 0 auto;
+            font-size: 18px;
+            line-height: 1.4;
+            overflow-y: auto;
+            width: 100%;
+        }
+
+        .line { margin-bottom: 5px; }
+        .success { color: #00ff9c; }
+        .info { color: #00bfff; }
+        .warn { color: #ffcc00; }
+        .fun { color: #ff69b4; text-shadow: 0 0 5px #ff69b4; }
+        .prompt { color: #fff; margin-right: 10px; opacity: 0.7; }
+
+        /* ستايل كلمة GOOD JOB في الآخر */
+        #footer-status {
+            text-align: center;
+            font-weight: bold;
+            font-size: 24px;
+            letter-spacing: 5px;
+            padding: 20px;
+            color: #00ff9c;
+            text-shadow: 0 0 10px #00ff9c;
+            opacity: 0;
+            transition: opacity 1s;
+        }
+
+        .cursor::after {
+            content: "█";
+            animation: blink 1s infinite;
+            margin-left: 5px;
+        }
+
+        @keyframes blink { 50% { opacity: 0; } }
+        
+        /* إخفاء السكرول بار */
+        #terminal::-webkit-scrollbar { width: 0; }
+    </style>
+</head>
+<body>
+
+<div id="terminal"></div>
+<div id="footer-status">GOOD JOB!</div>
+
+<script>
+const terminal = document.getElementById("terminal");
+const footer = document.getElementById("footer-status");
+
+const lines = [
+    { text: "MXM SYSTEM v4.7 INITIALIZING...", type: "info" },
+    { text: "---------------------------------", type: "info" },
+    { text: "puzzle1 ............. checking", type: "info" },
+    { text: "results .................. solved", type: "success" },
+    { text: "analyzing subject: KIMO", type: "info" },
+    { text: "brain_status ............ unusual", type: "warn" },
+    { text: "kimo brain :) .......... evolving", type: "fun" },
+    { text: "neural patterns syncing", type: "info" },
+    { text: "logic modules .......... stable", type: "success" },
+    { text: "cheating ......... undetected", type: "warn" },
+    { text: "preparing next page...", type: "info" },
+    { text: "loading resources ....... [OK]", type: "success" },
+    { text: "---------------------------------", type: "info" },
+    { text: "after this round choose the difficulty...", type: "info" },
+    { text: "easy / hard / insane", type: "info" },
+    { text: "not you kimo... that's not an option.", type: "fun" },
+    { text: "difficulty auto-selected: MEDIUM", type: "success" },
+    { text: "system ready. redirecting...", type: "info" }
+];
+
+let lineIndex = 0;
+
+async function typeEffect(element, text) {
+    for (let char of text) {
+        element.textContent += char;
+        // سرعة كتابة الحروف (20 ملي ثانية)
+        await new Promise(r => setTimeout(r, 20));
+    }
+}
+
+async function startTerminal() {
+    for (let lineData of lines) {
+        const lineDiv = document.createElement("div");
+        lineDiv.className = `line ${lineData.type}`;
+        
+        // إضافة علامة الـ Prompt قبل كل سطر
+        const promptSpan = document.createElement("span");
+        promptSpan.className = "prompt";
+        promptSpan.textContent = "root@mxm:~#";
+        lineDiv.appendChild(promptSpan);
+
+        const textSpan = document.createElement("span");
+        lineDiv.appendChild(textSpan);
+        terminal.appendChild(lineDiv);
+
+        // تأثير الكتابة
+        await typeEffect(textSpan, lineData.text);
+        
+        // انتظار بسيط بين السطور
+        await new Promise(r => setTimeout(r, 400));
+        
+        // سكرول لتحت تلقائي
+        terminal.scrollTop = terminal.scrollHeight;
+    }
+
+    // إظهار الكلمة الأخيرة
+    footer.style.opacity = "1";
+    footer.classList.add("cursor");
+
+    // التحويل للصفحة التالية
+    setTimeout(() => {
+        window.location.href = "../reward1.htm";
+    }, 3000);
+}
+
+startTerminal();
+</script>
+
+</body>
+</html>
